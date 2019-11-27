@@ -1,6 +1,6 @@
 # Retro-LFO
 
-![Circuit](img/circuit.png)
+![Circuit](img/circuit.jpeg)
 
 ## The Problem
 LFOs on older synthesizers, specifically the moog prodigy are severely limited in their capability. 1-2 wave analog wave forms severely limiting the control a musician has over a synthesizer. Since LFOs are control functions and do not directly enter into the audio output their is no analogue benefit of the circuitry that originally creates these functions. These synthesizers would be better served by a more robust LFO design.
