@@ -1,15 +1,51 @@
+DOC 1
+# Retro-WhiteNoise
+
+For my first project at Retrolinear, I developed a true whitenoise generator for the Atmel Architecture.
+
+
+## LFSR
+#### Fibonacci LFSR
+![LFSR](LFSR-F16.svg)
+#### Galois LFSR
+![LFSR](LFSR-G16.svg)
+
+The LFSR algorithm utilizes bit shifting and taps (the bits it polls for XOR/XNOR) to create a deterministically random sequence of bits based off the seed (initial state) and feedback function (Galois vs Fibonacci).
+
+
+## Implementation
+In implementing the program on an AtTiny45, I first thought to maintain two seeds and LFSRs switching between them to account for the speed requirements of the system as well as increase the length of the "random" sequence. This resulted in a consistent tone within the white noise, which decreased the amount of high frequency content we achieved. 
+
+This issue was caused by the interrupt system’s inherent latency and timing. In order to avoid this, I decided to program the same logic directly in machine code to avoid unnecessary looping and memory accesses.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Doc 2
 # Retro-LFO
 
 ![Circuit](img/circuit.jpeg)
 
 ## The Problem
-LFOs on older synthesizers, specifically the moog prodigy are severely limited in their capability. 1-2 wave analog wave forms severely limiting the control a musician has over a synthesizer. Since LFOs are control functions and do not directly enter into the audio output their is no analogue benefit of the circuitry that originally creates these functions. These synthesizers would be better served by a more robust LFO design.
+With only 1-2 wave analog waveforms, LFOs on older synthesizers, specifically the moog prodigy, are severely limited in their capabilities. Since LFOs are control functions and do not directly enter into the audio output, there is no benefit of the circuitry that initially creates these functions. These synthesizers would be better served by a more robust LFO design.
 
 ## The Solution
-Utilizing an Attiny45 I have developed an LFO that can be retrofit into synthesizers to increase it's LFO functions to include, square (bipolar and unipolar), saw, reverse saw, triangle, sine and sample & hold wave forms. This solution is cost effective featuring minimal analogue components and an 8 bit microcontroller costing less than 1 dollar. 
-
+Utilizing an Attiny45 I have developed an LFO that can be retrofitted into synthesizers to increase LFO functions. These would include square (bipolar and unipolar), saw, reverse saw, triangle, sine and sample, and hold waveforms. This solution is cost effective using an 8 bit microcontroller that costs under a dollar, and minimal analog components.
+ 
 ## The algorithms 
-Algorithms for the LFO shapes are simple and concise. By varying a PWM utility on the Attiny we are able to output a varying pulse square wave that when filters creates our simple control functions.
+Algorithms for the LFO shapes are simple and concise. By varying a PWM utility on the Attiny, we output a varying pulse square wave that once filtered creates smooth control functions.
 
 ### Saw 
 ```
@@ -122,7 +158,7 @@ uint8_t sinewave_(uint8_t* i){
 ```
 
 ## Varying the Frequency
- In order to vary the Frequency I implemented a delay function as well as a mapping function to take my inputs from the ADCs and map them to a piecewise logarithmic modeling function to take the frequency from 0.3 Hz to 30Hz
+In order to vary the Frequency, I implemented a delay function as well as a mapping function to take my inputs from the ADCs and map them to a piecewise logarithmic modeling function to bring the frequency from 0.3 Hz to 30Hz
 
  ```
  uint16_t map_m(uint16_t input_end, uint16_t        input_start, uint16_t output_end,               uint16_t output_start,  uint16_t input){
@@ -144,18 +180,18 @@ int16_t VoltageToDelay (uint16_t volt){
  ```
 
 ### Feature Freak
-In developing the LFO we took care to try adding as much as we could, utilizing all 8 pins on the Attiny45. 
+In developing the LFO, we aimed to be as thorough as possible. We utilized all 8 pins on the Attiny45. 
 
 #### 3 Control Pots
-    By adding a third pot we tried to implement various new effects. One such effect was an amplitude varying waveform based off a timing determined from the third pot. The first issue with this method we quickly determined was that reading 3 pots quickly enough caused our system to fail. Delays and skips would occur, ruining our wave form. One possible solution for this would be implementing a rigorous RTOS but I have not had the opportunity to look into this more. 
+By adding a third pot, we tried to implement new effects. One, an amplitude varying waveform based off timing determined by the third pot. We soon learned that reading 3 pots this quickly causes system failure. Delays and skips would occur, ruining our waveform. One possible solution for this would be implementing a rigorous RTOS, though I have yet to attempt implementation.  
 
-    Instead we decided to create a button that would allow modes to be switched and the time varying amplitude to become one of the two control functions, replacing the waveform chooser. It is important that musicians have access to the effects they are using and we hope that this tradeoff will still benefit them.
+Instead, we decided to create a button that would allow modes to be switched and the time varying amplitude to become one of the two control functions, replacing the waveform chooser. It is important that musicians have access to the effects they are using and we hope that this tradeoff will still benefit them.
+
 #### Varying Amplitude with Phase Modulation and Interpolation/Dithering
-    The low 12-bit resolution of our PWM forced us to resort to clever bit calculations in an attempt to smooth low amplitude wave forms. As we reduce amplitude we reduce our bit resolution since we are only afforded smaller values, Only able to use the least signficant byte of our available bits when faced with a signal at half the amplitude. In order to get around this we attempted a version of interpolation through dithering. When at intermediate phases of a waveform whenever their are x number of steps between the current sample and the next sample we switch between the available bits to simulate higher bit resolution.
+    The low 12-bit resolution of our PWM forced us to resort to clever bit calculations in an attempt to smooth low amplitude wave forms. As we reduce amplitude, we reduce our bit resolution since we are only afforded smaller values. We are only able to use the least significant byte of our available bits when faced with a signal at half the amplitude. In order to get around this, we attempted a version of interpolation through dithering. When at intermediate phases of a waveform — whenever there are x number of steps between the current sample and the next sample — we switch between the available bits to simulate higher bit resolution.
+Unfortunately this did not give us much greater resolution. 
 
-    Unfortunately this did not give us much greater resolution. 
-
-    Also, in order to create the amplitude varyiation we implemented a phasing system. By combining a waveform out of phase with the output waveform, amplitude can be reduced or increased. So in order to vary the amplitude I simply varied the phase of a following waveform until the timestep finished. 
+Additionally, in order to create the amplitude variation, we implemented a phasing system. By combining a waveform out of phase with the output waveform, amplitude can be reduced or increased. In order to vary the amplitude, I simply varied the phase of a following waveform until the time step finished. 
 
 ```
 uint8_t dither_up(uint8_t old_val, uint8_t new_val, uint8_t og_delay, uint8_t curr_delay){
@@ -266,4 +302,4 @@ uint8_t dither(int16_t delay, uint8_t old_val){
 
 
 # Future Plans
-The plan for the Retro-LFO is to develop a PCB and begin offering it as an enhancement during synthesizer repairs at Retrolinear as well as market it to eurorack enthusiasts on the web. 
+The plan for the Retro-LFO is to develop a PCB and begin offering it as an enhancement during synthesizer repairs at Retrolinear, as well as market it to eurorack enthusiasts on the web.
