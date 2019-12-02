@@ -2,6 +2,7 @@
 
 ![Circuit](img/circuit.jpeg)
 
+repo link: https://github.com/davispolito/Retro-LFO.git
 ## The Problem
 With only 1-2 wave analog waveforms, LFOs on older synthesizers, specifically the moog prodigy, are severely limited in their capabilities. Since LFOs are control functions and do not directly enter into the audio output, there is no benefit of the circuitry that initially creates these functions. These synthesizers would be better served by a more robust LFO design.
 
