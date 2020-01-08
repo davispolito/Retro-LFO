@@ -1,5 +1,6 @@
-
-![Circ](img/SCHERMATICV3.pdf)
+![Photo](img/circuit.jpeg)
+![Schematic](img/SCHERMATICV3.png)
+ 
 =======
 
 ## The Problem
