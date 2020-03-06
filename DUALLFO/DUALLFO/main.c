@@ -4,6 +4,8 @@
  * Created: 1/9/2019 10:25:38 AM
  * Author : Davis Polito
  */ 
+#define STATIC_DELAY1 10
+#define STATIC_DELAY2 3
 #define CLOCK1_MAX 0xFFFF
 #define F_CPU 8000000
 #define SINE 0
@@ -46,17 +48,17 @@ typedef uint8_t(*wave_ptr)(uint8_t*);
 uint8_t sinewave_(uint8_t* i);
 typedef struct LFOs {
 	uint8_t i;
-	//uint8_t wave;
+	uint8_t wv;
 	uint16_t delay;
-	wave_ptr wave;
+	uint8_t(*wave)(uint8_t*);
 } LFO;
 
 
 static LFO lfo[2] = {
-	{0, 100,
+	{0, 0, 100,
 		&sinewave_
 	},
-	{0, 100, 
+	{0, 0, 100, 
 		&sinewave_
 	}
 };
@@ -176,26 +178,108 @@ uint8_t sinewave_(uint8_t* i){
 	(*i) %= 256;
 	return val;
 }
-///ROUND UP WHEN UP OR ROUND FOWN WHEN DOWN?????? 
+
 ISR(TIM1_COMPA_vect){
-	LFO *lfo_curr = &lfo[0];
-	OCR0A = lfo_curr->wave(&(lfo_curr->i));
-	uint16_t curr_timer = ((TCNT1H << 8) | TCNT1L);
+	OCR0A = lfo[0].wave(&(lfo[0].i));
+	uint16_t curr_timer = TCNT1;
 	uint16_t time_diff = CLOCK1_MAX - curr_timer;
-	uint16_t new_time = (time_diff < lfo_curr->delay) ? 
-						(time_diff - lfo_curr->delay) : (curr_timer + lfo_curr->delay);
+	uint16_t new_time = (time_diff < (uint16_t) lfo[0].delay) ?
+						((uint16_t) lfo[0].delay - time_diff) : (curr_timer + (uint16_t)lfo[0].delay);
 	OCR1A = new_time;
 }
 
 ISR(TIM1_COMPB_vect){
-	LFO *lfo_curr = &lfo[1];
-	OCR0B = lfo_curr->wave(&(lfo_curr->i));
-	uint16_t curr_timer = ((TCNT1H << 8) | TCNT1L);
+	OCR0B = lfo[1].wave(&(lfo[1].i));
+	uint16_t curr_timer = TCNT1;
 	uint16_t time_diff = CLOCK1_MAX - curr_timer;
-	uint16_t new_time = (time_diff < lfo_curr->delay) ?
-						(time_diff - lfo_curr->delay) : (curr_timer + lfo_curr->delay);
+	uint16_t new_time = (time_diff < (uint16_t) lfo[1].delay) ?
+						((uint16_t) lfo[1].delay - time_diff) : (curr_timer + lfo[1].delay);
 	OCR1B = new_time;
 }
+
+// ISR(TIM0_COMPB_vect){
+// 	switch (lfo[1].wv) {
+// 		case SINE : {
+// 			lfo[1].wave = &sinewave_;
+// 			break;
+// 		}
+// 		case SAW : {
+// 			lfo[1].wave = &sawtooth;
+// 			break;
+// 		}
+// 	
+// 		case RSAW : {
+// 			lfo[1].wave = &reversesaw;
+// 			break;
+// 		}
+// 	
+// 		case TRI : {
+// 			lfo[1].wave = &triangle;
+// 			break;
+// 		}
+// 	
+// 		case SQUAREP: {
+// 			lfo[1].wave = &square_p;
+// 			break;
+// 		}
+// 	
+// 		case SH : {
+// 			lfo[1].wave = &sampleAndHold;
+// 			break;
+// 		}
+// 	
+// 		case SQUAREN: {
+// 			lfo[1].wave = &square_n;
+// 			break;
+// 		}
+// 		case SQUAREF: {
+// 			lfo[1].wave = &square_f;
+// 			break;
+// 		}
+// 	}
+// }
+// 
+// ISR(TIM0_COMPA_vect){
+// 	switch (lfo[0].wv) {
+// 		case SINE : {
+// 			lfo[0].wave = &sinewave_;
+// 			break;
+// 		}
+// 		case SAW : {
+// 			lfo[0].wave = &sawtooth;
+// 			break;
+// 		}
+// 		
+// 		case RSAW : {
+// 			lfo[0].wave = &reversesaw;
+// 			break;
+// 		}
+// 		
+// 		case TRI : {
+// 			lfo[0].wave = &triangle;
+// 			break;
+// 		}
+// 		
+// 		case SQUAREP: {
+// 			lfo[0].wave = &square_p;
+// 			break;
+// 		}
+// 		
+// 		case SH : {
+// 			lfo[0].wave = &sampleAndHold;
+// 			break;
+// 		}
+// 		
+// 		case SQUAREN: {
+// 			lfo[0].wave = &square_n;
+// 			break;
+// 		}
+// 		case SQUAREF: {
+// 			lfo[0].wave = &square_f;
+// 			break;
+// 		}
+// 	}
+// }
 
 
 uint16_t map_m(uint16_t input_end, uint16_t input_start, uint16_t output_end, uint16_t output_start,  uint16_t input){
@@ -206,35 +290,54 @@ uint16_t map_m(uint16_t input_end, uint16_t input_start, uint16_t output_end, ui
 
 int16_t VoltageToDelay (uint16_t volt){
 	if(volt < 500){
-		return map_m(500, 50, 30, 1, volt);
+		return map_m(800, 0, 200, 50, volt);
 	} else {
-		return map_m(1024, 500, 100, 30, volt);
+		return map_m(1024, 800, 300, 200, volt);
 	}
 	
 	//return 60 + (volt * 4);			//9000 top value (.3 Hz)  60 - 30 Hz
 }
-
-void VoltageToWave(uint16_t volt, LFO* lfo){
-	
+uint8_t VoltageToWave(uint16_t volt){
+	uint8_t wave = 0;
 	if (volt < 100){
-		lfo->wave = &sinewave_;
-	} else if (volt < 200){
-		lfo->wave = &sawtooth;
-	} else if (volt < 300){
-		lfo->wave = &reversesaw;
-	} else if (volt < 400){
-		lfo->wave = &triangle;
-	} else if (volt < 700){
-		lfo->wave = &square_p;
-	} else if (volt < 800){
-		lfo->wave = &square_n;
-	} else if (volt < 900) {
-		lfo->wave = &square_p;
-	} else {
-		lfo->wave = &sampleAndHold;
+		wave = SINE;
+		} else if (volt < 200){
+		wave = SAW;
+		} else if (volt < 300){
+		wave = RSAW;
+		} else if (volt < 400){
+		wave = TRI;
+		} else if (volt < 700){
+		wave = SQUAREP;
+		} else if (volt < 800){
+		wave = SQUAREN;
+		} else if (volt < 900) {
+		wave = SQUAREF;
+		} else {
+		wave = SH;
 	}
+	return wave;
 }
 
+void vtw(uint16_t volt, uint8_t input){
+	if (volt < 100){
+		lfo[input].wave = &sinewave_;
+		} else if (volt < 200){
+		lfo[input].wave = &sawtooth;
+		} else if (volt < 300){
+		lfo[input].wave = &reversesaw;
+		} else if (volt < 400){
+		lfo[input].wave = &triangle;
+		} else if (volt < 700){
+		lfo[input].wave = &square_p;
+		} else if (volt < 800){
+		lfo[input].wave = &square_n;
+		} else if (volt < 900) {
+		lfo[input].wave = &square_f;
+		} else {
+		lfo[input].wave = &sampleAndHold;
+	}
+}
 void enableADC(){
 	DDRA &= ~(1 << PINA0) | ~(1 << PINA1) | ~(1 << PINA2) | ~(PINA3);
 	ADMUX = 0;							// select PB3
@@ -242,59 +345,9 @@ void enableADC(){
 	ADCSRA |= (1 << ADEN);									//ADC enable
 }
 
-void calibrate(){
-	cli();
-    uint16_t new_cal = 0;
-	uint16_t calibration = 0;
-	while(!(PINB & (1 << PINB1))){
-		ADMUX = (1 << MUX1);
-		
-		// start single conversion
-		// write '1' to ADSC
-		ADCSRA |= (1<<ADSC);
-	   
-		// wait for conversion to complete
-		// ADSC becomes '0' again
-		// till then, run loop continuously
-		while(ADCSRA & (1<<ADSC));
-		uint16_t new_cal = 0;
-		new_cal = ADCL;
-		new_cal |= ADCH << 8;
-		if ((new_cal <= (calibration - DEADBAND) || new_cal >= (calibration + DEADBAND))){
-			calibration = new_cal;
-			
-		//	bias = map_m(1024, 100, 138, 122, calibration);
-			//delay = VoltageToDelay(conversion);
-			if (calibration < 100){
-				bias = 120;
-				} else if (calibration < 200){
-				bias = 121;
-				} else if (calibration < 300){
-				bias = 122;
-				} else if (calibration < 400){
-				bias = 123;
-				} else if (calibration < 500){
-				bias = 124;
-				} else if (calibration < 600) {
-				bias = 125;
-				} else if (calibration < 700) {
-				bias = 126;
-				} else if (calibration < 800) {
-				bias = 127;
-				} else if (calibration < 1000) {
-				bias = 128;
-			}
-		}
-		
-		
-		OCR0A = bias;
-	
-		//OCR0A = 25;
-	}
-	//EEPROM_WRITE(0, bias);
-}
 //CLK FREQUENCY IS 8 MHz (be sure to set the system clock prescale to 0)
-void adc_conversion(LFO* lfo, uint8_t input){
+void adc_conversion(uint8_t input){
+	static uint16_t clipped = 0;
 	    //clear lower 3 bits of admux
 	    ADMUX &= 0xF8;
 		ADMUX |= input;
@@ -309,54 +362,95 @@ void adc_conversion(LFO* lfo, uint8_t input){
 		new_conversion = 0;
 		new_conversion = ADCL;
 		new_conversion |= ADCH << 8;
-		ADCSRA |= (1<<ADSC);
-		if (input % 2){
+		
+		if (input == 0){
 			if ((new_conversion <= (wconversion - 30) || new_conversion >= (wconversion + 30))){
 				wconversion = new_conversion;
-				VoltageToWave(wconversion, &lfo[input/2]);
+				vtw(wconversion, 0);
 			}
-		} else {
+			
+		}
+		else if(input == 1){
 			if ((new_conversion <= (conversion - DEADBAND) || new_conversion >= (conversion + DEADBAND))){
-				conversion = new_conversion;
-				lfo[input / 2].delay = VoltageToDelay(conversion);
+				conversion = new_conversion ;
+				lfo[0].delay = conversion / 10;
 			}
 		}
-		
+		else if (input == 2){
+			if ((new_conversion <= (wconversion - 30) || new_conversion >= (wconversion + 30))){
+				wconversion = new_conversion;
+				vtw(wconversion, 1);
+			}
+			
+		}
+		else if(input == 3){
+			if ((new_conversion <= (conversion - DEADBAND) || new_conversion >= (conversion + DEADBAND))){
+				conversion = new_conversion ;
+				lfo[1].delay = conversion / 10; 
+			}
+		}
+		else if(input == 4){
+			if ((new_conversion <= (conversion - DEADBAND) || new_conversion >= (conversion + DEADBAND))){
+				conversion = new_conversion;
+				if(conversion < 400 && !clipped){
+					  PORTB &= 0xFC;
+				}
+				else if(conversion < 600 && !clipped){
+					//yellow		
+				    PORTB &= 0xFC;
+                    PORTB |= 0x01;
+				}
+				else if (conversion < 800 && !clipped){
+					//both (orange)
+					PORTB &= 0xFC;
+					 PORTB |= 0x03;
+				}
+				else if( conversion < 1024|| clipped){
+					//red
+					if (!clipped){
+						clipped = 1;
+						PORTB &= 0xFC;
+						PORTB |= 0x02;
+					} else { 
+						clipped--;
+					}
+					
+				}
+			}
+		}
+
+
 }
 
 int main(void) {
 	//Set PORTB1 pin as output
 	cli();
-	DDRB = (1 << PORTB2);
+	DDRB = (1 << PORTB2) | (1 << PORTB1) | (1 << PORTB0);
 	DDRA = (1 << PORTA7);
 	//PORTB = (1 << PINB0) | (1 << PINB1);
 	// initial OCR0A value
 	OCR0A = 80;
 	OCR0B = 80;
 	//Output compare OC0A 8 bit non inverted PWM
-	TCCR0A = (1 << COM0A1) | (1 << COM0B1)| (1 << WGM01) | (1 << WGM00);
+	TCCR0A = (1 << COM0A1) | (1 << COM0B1) | (1 << WGM01) | (1 << WGM00);
 	//start timer without prescaler
 	
 	//enable output compare interrupt for OCR0A and OCR0B
 	TIMSK1 = (1 << OCIE1A) | (1 << OCIE1B);
+	//TIMSK0 = (1 << OCIE0A) | (1 << OCIE0B);
 	
 	TCCR1A = 0;
 	TCCR1B = 0;
 	//clock change
-	
-	//CLKPR = 0;
+CLKPR = (1 << CLKPCE);
+CLKPR = 0;
     TCCR0B= (1 << CS00);
-	TCCR1B = (1 << CS00) | (1 << CS02);
+	TCCR1B = ( 1 << CS02);
 	//CLKPR = (1 << CLKPCE); 
 	//ADC
 	enableADC();
-	//enable global interrupts
-// 	OCR1AH = 0;
-// 	OCR1AL = 80;
-// 	OCR1BH = 0;
-//     OCR1BL = 80;
-// 	TCNT1L = 0;
-// 	TCNT1H = 0;
+    OCR0A = 80;
+	OCR0B = 80;
 	OCR1A = 80;
 	TCNT1 = 0;
 	OCR1B = 60;
@@ -364,16 +458,11 @@ int main(void) {
 
 	//PORTB |= (1 << PB1);
 	while (1){
-		/*if(!(PINB & (1 << PINB1))){
-			calibrate();
-		}*/
-		for(int i = 0; i < NUMPOTS; i++) {
-			adc_conversion(lfo, i);
-			int a = TCNT0;
-			TCNT0 = a;
-		}
-	
-		//printf("%u", TCNT1);
+		adc_conversion(0);
+		adc_conversion(1);
+		adc_conversion(2);
+		adc_conversion(3);
+		adc_conversion(4);
 	}
 }
 
