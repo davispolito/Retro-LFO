@@ -1,0 +1,7 @@
+capacitors
+
+0.1uf - https://www.digikey.com/product-detail/en/murata-electronics/GRM033R61A104ME15D/490-5405-1-ND/2175212 (0201_0603)
+10uf - tantalum (https://www.digikey.com/product-detail/en/avx-corporation/TAJA106K006SNJ/478-10742-1-ND/7536605) (1206)
+.33uf - https://www.digikey.com/product-detail/en/yageo/CC0603KRX7R7BB334/311-2081-1-ND/5962183 (0603_1608)
+0.01 uf - https://www.digikey.com/product-detail/en/murata-electronics/GRM033R61A103KA01J/490-8156-1-ND/4380449 (0201_0603)
+5.6nf https://www.digikey.com/product-detail/en/murata-electronics/GRM033R61E562KA12D/490-10426-1-ND/5026314 (0201_0603)6.8nf    https://www.digikey.com/product-detail/en/murata-electronics/GRM033R61E682KA12D/490-9995-1-ND/5026316(0201_0603)
